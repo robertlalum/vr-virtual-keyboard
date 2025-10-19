@@ -1,108 +1,151 @@
-
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>VR Keyboard + Aligned Text & Cursor</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-</head>
-<body>
-<a-scene background="color: #111" vr-mode-ui="enterVRButton: true">
-  
-  <!-- Camera + Controllers -->
-  <a-entity id="cameraRig">
-    <a-entity id="camera" camera look-controls position="0 1.6 0"></a-entity>
-    <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .key; showLine:true"></a-entity>
-  </a-entity>
+  <head>
+    <meta charset="utf-8" />
+    <title>WebXR Virtual Keyboard + Pointer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
-  <!-- Text Panel -->
-  <a-entity id="screen" position="0 1.6 -1.2">
-    <a-plane width="1.6" height="0.6" color="#222"></a-plane>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
 
-    <!-- Group for both text and cursor -->
-    <a-entity id="textGroup" position="-0.75 0.25 0.01">
-      <a-entity id="typedText"
-        text="value: ; color:#fff; width:1.5; align:left; wrapCount:30; baseline:top">
+    <style>
+      body { margin: 0; font-family: sans-serif; }
+      #uiHint {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        z-index: 10;
+        color: white;
+        background: rgba(0,0,0,0.4);
+        padding: 8px;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="uiHint">
+      Open in Meta Quest Browser. Point + trigger to type. Grip toggles pointer drag.
+    </div>
+
+    <a-scene background="color: #111" vr-mode-ui="enterVRButton: true">
+      <!-- Camera Rig + Controllers -->
+      <a-entity id="cameraRig">
+        <a-entity id="camera" camera look-controls position="0 1.6 0"></a-entity>
+        <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .key; far: 10; showLine: true"></a-entity>
+        <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .key; far: 10; showLine: true"></a-entity>
       </a-entity>
-      <a-plane id="cursor" color="#fff" width="0.01" height="0.05" position="0 0 0.02"></a-plane>
-    </a-entity>
-  </a-entity>
 
-  <!-- Keyboard -->
-  <a-entity id="keyboard" position="0 1.1 -1.2"></a-entity>
-</a-scene>
+      <!-- Floating Text Panel -->
+      <a-entity id="screen" position="0 1.6 -1.2">
+        <!-- Border frame to visualize edges -->
+        <a-plane width="1.6" height="0.6" color="#111" material="shader: flat; side: double"></a-plane>
+        <a-plane width="1.6" height="0.6" color="none" wireframe="true" material="color:#fff; wireframe:true; side:double"></a-plane>
 
-<script>
-const layout = [
-  ['1','2','3','4','5','6','7','8','9','0'],
-  ['Q','W','E','R','T','Y','U','I','O','P'],
-  ['A','S','D','F','G','H','J','K','L'],
-  ['Z','X','C','V','B','N','M','Back'],
-  ['Space','Enter','!','@','#','$']
-];
+        <!-- Text Entity -->
+        <a-entity id="typedText"
+                  position="0 0 0.01"
+                  text="value: ; color: #fff; width: 1.45; align: left; anchor: center; baseline: top; wrapCount: 36;">
+        </a-entity>
 
-let buffer = '';
-const typedText = document.getElementById('typedText');
-const cursor = document.getElementById('cursor');
-const charsPerLine = 30;
-const charWidth = 0.045;
-const lineHeight = 0.055;
+        <!-- Cursor -->
+        <a-entity id="cursorBlink"
+                  geometry="primitive: plane; width: 0.015; height: 0.05"
+                  material="color: #fff"
+                  position="-0.72 0.22 0.02"
+                  visible="true">
+        </a-entity>
+      </a-entity>
 
-function updateScreen() {
-  typedText.setAttribute('text', `value: ${buffer}; color:#fff; width:1.5; align:left; wrapCount:${charsPerLine}; baseline:top`);
+      <!-- Keyboard -->
+      <a-entity id="keyboard" position="0 1.1 -1.2"></a-entity>
 
-  // Manual cursor placement based on same coordinate origin
-  const lines = buffer.split('\n').flatMap(line => {
-    if (line.length <= charsPerLine) return [line];
-    const wrapped = [];
-    for (let i = 0; i < line.length; i += charsPerLine)
-      wrapped.push(line.slice(i, i + charsPerLine));
-    return wrapped;
-  });
+      <!-- Floor -->
+      <a-plane rotation="-90 0 0" width="10" height="10" color="#0b0b0b" position="0 0 -2"></a-plane>
 
-  const lastLine = lines[lines.length - 1] || '';
-  const x = charWidth * lastLine.length;
-  const y = -lineHeight * (lines.length - 1);
-  cursor.setAttribute('position', `${x} ${y} 0.02`);
-}
+      <a-entity light="type: ambient; intensity: 0.5"></a-entity>
+      <a-entity light="type: directional; intensity: 0.7" position="-1 2 1"></a-entity>
+    </a-scene>
 
-function handleKey(k) {
-  if (k === 'Back') buffer = buffer.slice(0, -1);
-  else if (k === 'Space') buffer += ' ';
-  else if (k === 'Enter') buffer += '\n';
-  else buffer += k;
-  updateScreen();
-}
+    <script>
+      const layout = [
+        ['1','2','3','4','5','6','7','8','9','0'],
+        ['Q','W','E','R','T','Y','U','I','O','P'],
+        ['A','S','D','F','G','H','J','K','L'],
+        ['Z','X','C','V','B','N','M','Back'],
+        ['Space','Enter','!','@','#','$']
+      ];
 
-function createKeyboard() {
-  const parent = document.getElementById('keyboard');
-  const keyW = 0.14, keyH = 0.12, gap = 0.01;
-  layout.forEach((row, r) => {
-    let rowWidth = row.length * (keyW + gap);
-    let startX = -0.7 + (1.0 - rowWidth) / 2 + r * 0.02;
-    row.forEach(k => {
-      let w = (k === 'Space') ? (keyW * 5 + gap * 4) : (k === 'Enter' ? keyW * 1.7 : keyW);
-      const el = document.createElement('a-entity');
-      el.setAttribute('geometry', `primitive: plane; width:${w}; height:${keyH}`);
-      el.setAttribute('material', 'color:#333; shader:flat');
-      el.setAttribute('position', `${startX + w / 2} ${-r * (keyH + gap)} 0`);
-      el.setAttribute('class', 'key');
-      const label = document.createElement('a-entity');
-      label.setAttribute('text', `value:${k}; align:center; width:2; color:#fff`);
-      label.setAttribute('position', '0 0 0.01');
-      el.appendChild(label);
-      el.addEventListener('click', () => handleKey(k));
-      parent.appendChild(el);
-      startX += w + gap;
-    });
-  });
-}
+      let buffer = '';
+      const typedText = document.getElementById('typedText');
+      const cursor = document.getElementById('cursorBlink');
 
-setTimeout(() => { createKeyboard(); updateScreen(); }, 500);
-setInterval(() => { cursor.setAttribute('visible', !cursor.getAttribute('visible')); }, 500);
-</script>
-</body>
+      function updateScreen() {
+        typedText.setAttribute('text', `value: ${buffer}; color: #fff; width: 1.45; align: left; anchor: center; baseline: top; wrapCount: 36;`);
+        // Move cursor at the end of text
+        const lines = buffer.split('\n');
+        const lineHeight = 0.07;
+        const cursorY = 0.25 - (lines.length - 1) * lineHeight;
+        const lastLineLength = lines[lines.length - 1].length;
+        const cursorX = -0.72 + (lastLineLength * 0.04);
+        cursor.setAttribute('position', `${cursorX} ${cursorY} 0.02`);
+      }
+
+      function handleKey(k) {
+        if (k === 'Back') buffer = buffer.slice(0, -1);
+        else if (k === 'Space') buffer += ' ';
+        else if (k === 'Enter') buffer += '\n';
+        else buffer += k;
+        updateScreen();
+      }
+
+      function createKeyboard() {
+        const parent = document.getElementById('keyboard');
+        const keyW = 0.14, keyH = 0.12, rowGap = 0.015;
+        let startY = 0.02;
+
+        layout.forEach((row, rowIndex) => {
+          let rowWidth = row.reduce((acc, k) => acc + ((k === 'Space') ? keyW * 5 + 0.04 : (k === 'Enter' ? keyW * 1.7 : keyW)) + 0.01, 0);
+          let startX = -rowWidth / 2;
+          row.forEach(k => {
+            let w = (k === 'Space') ? (keyW * 5 + 0.04) : (k === 'Enter' ? keyW * 1.7 : keyW);
+            const el = document.createElement('a-entity');
+            el.setAttribute('geometry', `primitive: plane; width: ${w}; height: ${keyH}`);
+            el.setAttribute('material', 'color: #333; shader: flat');
+            el.setAttribute('position', `${startX + w/2} ${startY - rowIndex*(keyH+rowGap)} 0`);
+            el.setAttribute('class', 'key');
+
+            const label = document.createElement('a-entity');
+            label.setAttribute('text', `value: ${k}; align: center; width: 2; color: #fff`);
+            label.setAttribute('position', '0 0 0.01');
+            el.appendChild(label);
+
+            el.addEventListener('click', () => {
+              handleKey(k);
+              el.setAttribute('scale', '0.95 0.95 0.95');
+              setTimeout(() => el.setAttribute('scale', '1 1 1'), 80);
+            });
+
+            parent.appendChild(el);
+            startX += w + 0.01;
+          });
+        });
+      }
+
+      setTimeout(() => {
+        createKeyboard();
+        updateScreen();
+      }, 600);
+
+      // Cursor blink
+      setInterval(() => {
+        cursor.setAttribute('visible', !cursor.getAttribute('visible'));
+      }, 500);
+    </script>
+  </body>
 </html>
 
+
+
     
+
