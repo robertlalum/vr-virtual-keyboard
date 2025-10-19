@@ -43,10 +43,13 @@
         <a-plane width="1.6" height="0.6" color="none" wireframe="true" material="color:#fff; wireframe:true; side:double"></a-plane>
 
         <!-- Text Entity -->
-        <a-entity id="typedText"
-                  position="0 0 0.01"
-                  text="value: ; color: #fff; width: 1.45; align: left; anchor: center; baseline: top; wrapCount: 36;">
-        </a-entity>
+        <a-entity
+  id="typedText"
+  position="-0.75 0.25 0.01"
+  text="value: ; color: #fff; width: 1.45; align: left; anchor: left; baseline: top; wrapCount: 36;"
+  geometry="primitive: plane; height: 0.5; width: 1.5"
+  material="color: #222; opacity: 0.9; side: double;">
+</a-entity>
 
         <!-- Cursor -->
         <a-entity id="cursorBlink"
@@ -58,94 +61,3 @@
       </a-entity>
 
       <!-- Keyboard -->
-      <a-entity id="keyboard" position="0 1.1 -1.2"></a-entity>
-
-      <!-- Floor -->
-      <a-plane rotation="-90 0 0" width="10" height="10" color="#0b0b0b" position="0 0 -2"></a-plane>
-
-      <a-entity light="type: ambient; intensity: 0.5"></a-entity>
-      <a-entity light="type: directional; intensity: 0.7" position="-1 2 1"></a-entity>
-    </a-scene>
-
-    <script>
-      const layout = [
-        ['1','2','3','4','5','6','7','8','9','0'],
-        ['Q','W','E','R','T','Y','U','I','O','P'],
-        ['A','S','D','F','G','H','J','K','L'],
-        ['Z','X','C','V','B','N','M','Back'],
-        ['Space','Enter','!','@','#','$']
-      ];
-
-      let buffer = '';
-      const typedText = document.getElementById('typedText');
-      const cursor = document.getElementById('cursorBlink');
-
-      function updateScreen() {
-        typedText.setAttribute('text', `value: ${buffer}; color: #fff; width: 1.45; align: left; anchor: center; baseline: top; wrapCount: 36;`);
-        // Move cursor at the end of text
-        const lines = buffer.split('\n');
-        const lineHeight = 0.07;
-        const cursorY = 0.25 - (lines.length - 1) * lineHeight;
-        const lastLineLength = lines[lines.length - 1].length;
-        const cursorX = -0.72 + (lastLineLength * 0.04);
-        cursor.setAttribute('position', `${cursorX} ${cursorY} 0.02`);
-      }
-
-      function handleKey(k) {
-        if (k === 'Back') buffer = buffer.slice(0, -1);
-        else if (k === 'Space') buffer += ' ';
-        else if (k === 'Enter') buffer += '\n';
-        else buffer += k;
-        updateScreen();
-      }
-
-      function createKeyboard() {
-        const parent = document.getElementById('keyboard');
-        const keyW = 0.14, keyH = 0.12, rowGap = 0.015;
-        let startY = 0.02;
-
-        layout.forEach((row, rowIndex) => {
-          let rowWidth = row.reduce((acc, k) => acc + ((k === 'Space') ? keyW * 5 + 0.04 : (k === 'Enter' ? keyW * 1.7 : keyW)) + 0.01, 0);
-          let startX = -rowWidth / 2;
-          row.forEach(k => {
-            let w = (k === 'Space') ? (keyW * 5 + 0.04) : (k === 'Enter' ? keyW * 1.7 : keyW);
-            const el = document.createElement('a-entity');
-            el.setAttribute('geometry', `primitive: plane; width: ${w}; height: ${keyH}`);
-            el.setAttribute('material', 'color: #333; shader: flat');
-            el.setAttribute('position', `${startX + w/2} ${startY - rowIndex*(keyH+rowGap)} 0`);
-            el.setAttribute('class', 'key');
-
-            const label = document.createElement('a-entity');
-            label.setAttribute('text', `value: ${k}; align: center; width: 2; color: #fff`);
-            label.setAttribute('position', '0 0 0.01');
-            el.appendChild(label);
-
-            el.addEventListener('click', () => {
-              handleKey(k);
-              el.setAttribute('scale', '0.95 0.95 0.95');
-              setTimeout(() => el.setAttribute('scale', '1 1 1'), 80);
-            });
-
-            parent.appendChild(el);
-            startX += w + 0.01;
-          });
-        });
-      }
-
-      setTimeout(() => {
-        createKeyboard();
-        updateScreen();
-      }, 600);
-
-      // Cursor blink
-      setInterval(() => {
-        cursor.setAttribute('visible', !cursor.getAttribute('visible'));
-      }, 500);
-    </script>
-  </body>
-</html>
-
-
-
-    
-
