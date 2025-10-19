@@ -45,7 +45,7 @@
     <a-entity id="screen" position="0 1.6 -1.2">
       <a-plane width="1.6" height="0.6" color="#222" material="shader:flat"></a-plane>
       <a-entity id="typedText"
-                position="-0.7 0.15 0.01"
+                position="0 0.25 0.01"
                 text="value: ; color: #fff; width: 1.5; align: left; wrapCount: 30; baseline: top">
       </a-entity>
       <a-entity id="cursorBlink"
@@ -54,10 +54,10 @@
                 position="0.72 -0.18 0.01"
                 visible="false">
       </a-entity>
-
-      <!-- Keyboard parent attached to screen -->
-      <a-entity id="keyboard" position="0 -0.35 0.01"></a-entity>
     </a-entity>
+
+    <!-- Keyboard parent -->
+    <a-entity id="keyboard" position="0 1.25 -1.2"></a-entity>
 
     <!-- Pointer dot -->
     <a-sphere id="pointerDot" radius="0.01" position="0 1.55 -0.9" visible="false"></a-sphere>
@@ -70,6 +70,7 @@
   </a-scene>
 
   <script>
+    // Keyboard layout
     const layout = [
       ['1','2','3','4','5','6','7','8','9','0'],
       ['Q','W','E','R','T','Y','U','I','O','P'],
@@ -94,17 +95,19 @@
     }
 
     function createKeyboard() {
-      const parent = document.getElementById('keyboard'); // now attached to screen
+      const parent = document.getElementById('keyboard');
       const keyW = 0.14, keyH = 0.12, rowGap = 0.015;
+      let startY = 0.02;
 
       layout.forEach((row, rowIndex) => {
-        let startX = -0.7;
+        let rowWidth = row.length * (keyW + 0.01);
+        let startX = -0.7 + (1.0 - rowWidth) / 2 + rowIndex * 0.02;
         row.forEach(k => {
           let w = (k === 'Space') ? (keyW * 5 + 0.04) : (k === 'Enter' ? keyW * 1.7 : keyW);
           const el = document.createElement('a-entity');
           el.setAttribute('geometry', `primitive: plane; width: ${w}; height: ${keyH}`);
           el.setAttribute('material', 'color: #333; shader: flat');
-          el.setAttribute('position', `${startX + w/2} ${-rowIndex*(keyH+rowGap)} 0`);
+          el.setAttribute('position', `${startX + w/2} ${startY - rowIndex*(keyH+rowGap)} 0`);
           el.setAttribute('class', 'key');
           
           const label = document.createElement('a-entity');
@@ -124,6 +127,7 @@
       });
     }
 
+    // Controllers & pointer
     const rightHand = document.getElementById('rightHand');
     const leftHand = document.getElementById('leftHand');
     let dragging = false;
@@ -140,12 +144,14 @@
       updateScreen();
     }, 500);
 
+    // Cursor blink
     setInterval(() => {
       const blink = document.getElementById('cursorBlink');
       blink.setAttribute('visible', !blink.getAttribute('visible'));
     }, 500);
   </script>
+
 </body>
 </html>
 
-          
+    
