@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -45,7 +45,7 @@
     <a-entity id="screen" position="0 1.6 -1.2">
       <a-plane width="1.6" height="0.6" color="#222" material="shader:flat"></a-plane>
       <a-entity id="typedText"
-                position="-0.78 0.25 0.01"
+                position="-0.7 0.15 0.01"
                 text="value: ; color: #fff; width: 1.5; align: left; wrapCount: 30; baseline: top">
       </a-entity>
       <a-entity id="cursorBlink"
@@ -69,104 +69,86 @@
     <a-entity light="type: directional; intensity: 0.7" position="-1 2 1"></a-entity>
   </a-scene>
 
-<script>
-/* --- Keyboard Layout --- */
-const layout = [
-  ['1','2','3','4','5','6','7','8','9','0'],
-  ['Q','W','E','R','T','Y','U','I','O','P'],
-  ['A','S','D','F','G','H','J','K','L'],
-  ['Z','X','C','V','B','N','M','Back'],
-  ['Space','Enter','!','@','#','$']
-];
+  <script>
+    const layout = [
+      ['1','2','3','4','5','6','7','8','9','0'],
+      ['Q','W','E','R','T','Y','U','I','O','P'],
+      ['A','S','D','F','G','H','J','K','L'],
+      ['Z','X','C','V','B','N','M','Back'],
+      ['Space','Enter','!','@','#','$']
+    ];
 
-// typed text buffer
-let buffer = '';
-const typedText = document.getElementById('typedText');
+    let buffer = '';
+    const typedText = document.getElementById('typedText');
 
-// update text on panel
-function updateScreen() {
-  typedText.setAttribute('text', `value: ${buffer}; color: #fff; width: 1.5; align: left; wrapCount: 30; baseline: top`);
-}
+    function updateScreen() {
+      typedText.setAttribute('text', `value: ${buffer}; color: #fff; width: 1.5; align: left; wrapCount: 30; baseline: top`);
+    }
 
-// handle key press
-function handleKey(k) {
-  if(k==='Back') buffer = buffer.slice(0,-1);
-  else if(k==='Space') buffer += ' ';
-  else if(k==='Enter') buffer += '\n';
-  else buffer += k;
-  updateScreen();
-}
+    function handleKey(k) {
+      if(k==='Back') buffer = buffer.slice(0,-1);
+      else if(k==='Space') buffer += ' ';
+      else if(k==='Enter') buffer += '\n';
+      else buffer += k;
+      updateScreen();
+    }
 
-/* --- Create VR Keyboard --- */
-AFRAME.registerComponent('key-pressable', {
-  init: function () {
-    this.el.addEventListener('click', () => {
-      const k = this.el.getAttribute('data-key');
-      handleKey(k);
-      // simple press animation
-      this.el.setAttribute('scale','0.95 0.95 0.95');
-      setTimeout(()=> this.el.setAttribute('scale','1 1 1'),80);
-    });
-  }
-});
+    function createKeyboard() {
+      const parent = document.getElementById('keyboard');
+      const keyW = 0.14, keyH = 0.12, rowGap = 0.015;
+      let startY = 0.02;
 
-function createKeyboard() {
-  const parent = document.getElementById('keyboard');
-  const keyW = 0.14, keyH = 0.12, rowGap = 0.015;
-  let startY = 0.02;
+      layout.forEach((row, rowIndex) => {
+        let rowWidth = row.length * (keyW + 0.01);
+        let startX = -0.7 + (1.0 - rowWidth) / 2 + rowIndex * 0.02;
+        row.forEach(k => {
+          let w = (k === 'Space') ? (keyW * 5 + 0.04) : (k === 'Enter' ? keyW * 1.7 : keyW);
+          const el = document.createElement('a-entity');
+          el.setAttribute('geometry', `primitive: plane; width: ${w}; height: ${keyH}`);
+          el.setAttribute('material', 'color: #333; shader: flat');
+          el.setAttribute('position', `${startX + w/2} ${startY - rowIndex*(keyH+rowGap)} 0`);
+          el.setAttribute('class', 'key');
+          
+          const label = document.createElement('a-entity');
+          label.setAttribute('text', `value: ${k}; align: center; width: 2; color: #fff`);
+          label.setAttribute('position', '0 0 0.01');
+          el.appendChild(label);
+          
+          el.addEventListener('click', () => {
+            handleKey(k);
+            el.setAttribute('scale', '0.95 0.95 0.95');
+            setTimeout(() => el.setAttribute('scale', '1 1 1'), 80);
+          });
+          
+          parent.appendChild(el);
+          startX += w + 0.01;
+        });
+      });
+    }
 
-  layout.forEach((row,rowIndex)=>{
-    let rowWidth = row.length*(keyW+0.01);
-    let startX = -0.7 + (1.0-rowWidth)/2 + rowIndex*0.02;
-    row.forEach(k=>{
-      let w = (k==='Space') ? (keyW*5+0.04) : (k==='Enter' ? keyW*1.7 : keyW);
-      const el = document.createElement('a-entity');
-      el.setAttribute('geometry',`primitive: plane; width: ${w}; height: ${keyH}`);
-      el.setAttribute('material','color: #333; shader: flat');
-      el.setAttribute('position',`${startX + w/2} ${startY - rowIndex*(keyH+rowGap)} 0`);
-      el.setAttribute('class','key');
-      el.setAttribute('data-key',k);
-      el.setAttribute('key-pressable','');
-      const label = document.createElement('a-entity');
-      label.setAttribute('text',`value: ${k}; align: center; width: 2; color: #fff`);
-      label.setAttribute('position','0 0 0.01');
-      el.appendChild(label);
-      parent.appendChild(el);
-      startX += w + 0.01;
-    });
-  });
-}
+    const rightHand = document.getElementById('rightHand');
+    const leftHand = document.getElementById('leftHand');
+    let dragging = false;
 
-createKeyboard();
+    function setupGripToggle(handEl) {
+      handEl.addEventListener('gripdown', () => dragging = true);
+      handEl.addEventListener('gripup', () => dragging = false);
+    }
 
-/* --- Pointer / mouse emulation --- */
-const rightHand = document.getElementById('rightHand');
-const leftHand = document.getElementById('leftHand');
-const pointerDot = document.getElementById('pointerDot');
+    setTimeout(() => {
+      createKeyboard();
+      setupGripToggle(rightHand);
+      setupGripToggle(leftHand);
+      updateScreen();
+    }, 500);
 
-let dragging = false;
-
-function setupGripToggle(handEl){
-  handEl.addEventListener('gripdown', ()=> dragging=true);
-  handEl.addEventListener('gripup', ()=> dragging=false);
-  handEl.addEventListener('triggerdown', ()=>{
-    const pos = pointerDot.getAttribute('position');
-    if(pointerDot.getAttribute('visible')) console.log('Pointer click at', pos);
-  });
-}
-
-setupGripToggle(rightHand);
-setupGripToggle(leftHand);
-
-// small blinking cursor
-setInterval(()=>{
-  const blink = document.getElementById('cursorBlink');
-  blink.setAttribute('visible', !blink.getAttribute('visible'));
-},500);
-
-// initial update
-updateScreen();
-</script>
+    setInterval(() => {
+      const blink = document.getElementById('cursorBlink');
+      blink.setAttribute('visible', !blink.getAttribute('visible'));
+    }, 500);
+  </script>
 
 </body>
 </html>
+
+
