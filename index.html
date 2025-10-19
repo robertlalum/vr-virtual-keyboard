@@ -45,14 +45,14 @@
     <a-entity id="screen" position="0 1.6 -1.2">
       <a-plane width="1.6" height="0.6" color="#222" material="shader:flat"></a-plane>
       <a-entity id="typedText"
-                position="0 0.25 0.01"
+                position="-0.7 0.25 0.01"
                 text="value: ; color: #fff; width: 1.5; align: left; wrapCount: 30; baseline: top">
       </a-entity>
       <a-entity id="cursorBlink"
                 geometry="primitive: plane; width:0.01; height:0.04"
                 material="color: #fff"
-                position="0.72 -0.18 0.01"
-                visible="false">
+                position="-0.7 0.25 0.01"
+                visible="true">
       </a-entity>
     </a-entity>
 
@@ -81,9 +81,25 @@
 
     let buffer = '';
     const typedText = document.getElementById('typedText');
+    const cursor = document.getElementById('cursorBlink');
 
     function updateScreen() {
+      // Update text
       typedText.setAttribute('text', `value: ${buffer}; color: #fff; width: 1.5; align: left; wrapCount: 30; baseline: top`);
+
+      // Update cursor position
+      const charsPerLine = 30; // wrapCount
+      const lineHeight = 0.05; // vertical space per line
+      const lines = buffer.split('\n').flatMap(l => {
+        if (l.length <= charsPerLine) return [l];
+        const wrapped = [];
+        for (let i=0; i<l.length; i+=charsPerLine) wrapped.push(l.slice(i,i+charsPerLine));
+        return wrapped;
+      });
+      const lastLine = lines[lines.length-1] || '';
+      const cursorX = -0.7 + 0.04 * lastLine.length;
+      const cursorY = 0.25 - lineHeight*(lines.length-1);
+      cursor.setAttribute('position', `${cursorX} ${cursorY} 0.01`);
     }
 
     function handleKey(k) {
@@ -101,57 +117,56 @@
 
       layout.forEach((row, rowIndex) => {
         let rowWidth = row.length * (keyW + 0.01);
-        let startX = -0.7 + (1.0 - rowWidth) / 2 + rowIndex * 0.02;
+        let startX = -0.7 + (1.0 - rowWidth)/2 + rowIndex*0.02;
         row.forEach(k => {
-          let w = (k === 'Space') ? (keyW * 5 + 0.04) : (k === 'Enter' ? keyW * 1.7 : keyW);
+          let w = (k==='Space') ? (keyW*5+0.04) : (k==='Enter' ? keyW*1.7 : keyW);
           const el = document.createElement('a-entity');
           el.setAttribute('geometry', `primitive: plane; width: ${w}; height: ${keyH}`);
           el.setAttribute('material', 'color: #333; shader: flat');
           el.setAttribute('position', `${startX + w/2} ${startY - rowIndex*(keyH+rowGap)} 0`);
           el.setAttribute('class', 'key');
-          
+
+          // Label
           const label = document.createElement('a-entity');
           label.setAttribute('text', `value: ${k}; align: center; width: 2; color: #fff`);
-          label.setAttribute('position', '0 0 0.01');
+          label.setAttribute('position','0 0 0.01');
           el.appendChild(label);
-          
+
+          // Key click
           el.addEventListener('click', () => {
             handleKey(k);
-            el.setAttribute('scale', '0.95 0.95 0.95');
-            setTimeout(() => el.setAttribute('scale', '1 1 1'), 80);
+            el.setAttribute('scale','0.95 0.95 0.95');
+            setTimeout(()=>el.setAttribute('scale','1 1 1'),80);
           });
-          
+
           parent.appendChild(el);
           startX += w + 0.01;
         });
       });
     }
 
-    // Controllers & pointer
     const rightHand = document.getElementById('rightHand');
     const leftHand = document.getElementById('leftHand');
     let dragging = false;
 
-    function setupGripToggle(handEl) {
-      handEl.addEventListener('gripdown', () => dragging = true);
-      handEl.addEventListener('gripup', () => dragging = false);
+    function setupGripToggle(handEl){
+      handEl.addEventListener('gripdown',()=>dragging=true);
+      handEl.addEventListener('gripup',()=>dragging=false);
     }
 
-    setTimeout(() => {
+    // Init
+    setTimeout(()=>{
       createKeyboard();
       setupGripToggle(rightHand);
       setupGripToggle(leftHand);
       updateScreen();
     }, 500);
 
-    // Cursor blink
-    setInterval(() => {
-      const blink = document.getElementById('cursorBlink');
-      blink.setAttribute('visible', !blink.getAttribute('visible'));
-    }, 500);
-  </script>
+    // Blink cursor
+    setInterval(()=>{
+      cursor.setAttribute('visible', !cursor.getAttribute('visible'));
+    },500);
 
+  </script>
 </body>
 </html>
-
-    
