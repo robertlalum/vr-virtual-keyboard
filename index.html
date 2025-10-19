@@ -1,63 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>WebXR Virtual Keyboard + Pointer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<head>
+  <meta charset="utf-8" />
+  <title>WebXR Virtual Keyboard + Pointer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
-    <!-- A-Frame -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
 
-    <style>
-      body { margin: 0; font-family: sans-serif; }
-      #uiHint {
-        position: absolute;
-        left: 12px;
-        top: 12px;
-        z-index: 10;
-        color: white;
-        background: rgba(0,0,0,0.4);
-        padding: 8px;
-        border-radius: 6px;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="uiHint">
-      Open in Meta Quest Browser. Point + trigger to type. Grip toggles pointer drag.
-    </div>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    #uiHint {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      z-index: 10;
+      color: white;
+      background: rgba(0,0,0,0.4);
+      padding: 8px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="uiHint">
+    Press “Enter VR” to start.<br>
+    Point and trigger to type. Grip to toggle pointer drag.
+  </div>
 
-    <a-scene background="color: #111" vr-mode-ui="enterVRButton: true">
-      <!-- Camera Rig + Controllers -->
-      <a-entity id="cameraRig">
-        <a-entity id="camera" camera look-controls position="0 1.6 0"></a-entity>
-        <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .key; far: 10; showLine: true"></a-entity>
-        <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .key; far: 10; showLine: true"></a-entity>
+  <a-scene background="color: #111" vr-mode-ui="enterVRButton: true">
+    <!-- Camera + Controllers -->
+    <a-entity id="cameraRig">
+      <a-entity id="camera" camera look-controls position="0 1.6 0"></a-entity>
+      <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .key; far: 10; showLine: true"></a-entity>
+      <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .key; far: 10; showLine: true"></a-entity>
+    </a-entity>
+
+    <!-- Floating Text Panel -->
+    <a-entity id="screen" position="0 1.6 -1.2">
+      <!-- Background panel -->
+      <a-plane width="1.6" height="0.6" color="#222" material="shader: flat"></a-plane>
+
+      <!-- Text (aligned top-left INSIDE the box) -->
+      <a-entity id="typedText"
+                position="-0.75 0.25 0.01"
+                text="value: ; color: #fff; width: 1.5; align: left; anchor: left; baseline: top; wrapCount: 40;">
       </a-entity>
 
-      <!-- Floating Text Panel -->
-      <a-entity id="screen" position="0 1.6 -1.2">
-        <!-- Border frame to visualize edges -->
-        <a-plane width="1.6" height="0.6" color="#111" material="shader: flat; side: double"></a-plane>
-        <a-plane width="1.6" height="0.6" color="none" wireframe="true" material="color:#fff; wireframe:true; side:double"></a-plane>
-
-        <!-- Text Entity -->
-        <a-entity
-  id="typedText"
-  position="-0.75 0.25 0.01"
-  text="value: ; color: #fff; width: 1.45; align: left; anchor: left; baseline: top; wrapCount: 36;"
-  geometry="primitive: plane; height: 0.5; width: 1.5"
-  material="color: #222; opacity: 0.9; side: double;">
-</a-entity>
-
-        <!-- Cursor -->
-        <a-entity id="cursorBlink"
-                  geometry="primitive: plane; width: 0.015; height: 0.05"
-                  material="color: #fff"
-                  position="-0.72 0.22 0.02"
-                  visible="true">
-        </a-entity>
+      <!-- Cursor -->
+      <a-entity id="cursorBlink"
+                geometry="primitive: plane; width:0.015; height:0.05"
+                material="color: #fff"
+                position="-0.73 0.2 0.02"
+                visible="false">
       </a-entity>
+    </a-entity>
 
-      <!-- Keyboard -->
+    <!-- Keyboard -->
+    <a-entity id="keyboard" position="0 1.25 -1.2"></a-entity>
+
+    <!-- Lighting -->
+    <a-entity light="type: ambient; intensity: 0.5"></a-entity>
+    <a-entity light="type: directional; intensity: 0.7" position="-1 2 1"></a-entity>
+
+    <!-- Floor -->
+    <a-plane rotation="-90 0 0" width="8" height="8" color="#0b0b0b"></a-plane>
+  </a-scene>
+
+  <script>
+    const layout = [
+      ['1','2','3','4','5','6','7','8','9','0'],
+      ['Q','W','E','R','T','Y','U','I','O','P'],
+      ['A','S','D','F','G','H','J','K','L'],
+      ['Z','X','C','V','B','N','M','Back'],
+      ['Space','Enter','.','!','?']
+    ];
+
+    let buffer = '';
+    const typedText = document.getElementById('typedText');
+    const cursor = document.getElementById('cursorBlink');
+
+    function updateScreen() {
+      typedText.setAttribute('text', `value: ${buffer}; color: #fff; width: 1.5; align: left; anchor: left; baseline: top; wrapCount: 40;`);
+      updateCursor();
+    }
+
+    function updateCursor() {
+      const lineLength = 40;
+      const lines = buffer.split("\n");
+      const lineCount = lines.length;
+      const currentLine = lines[lineCount - 1];
+      const charIndex = currentLine.length;
+      const charWidth = 0.037;
+      const lineHeight = 0.06;
+
+      const startX = -0.73;
+      const startY = 0.2;
+      const x = startX + charIndex * charWidth;
+      const y = startY - (lineCount - 1) * lineHeight;
+
+      cursor.setAttribute('position', `${x} ${y} 0.02`);
+    }
+
+    function handleKey(k) {
+      if (k === 'Back') buffer = buffer.slice(0, -1);
+      else if (k === 'Space') buffer += ' ';
+      else if (k === 'Enter') buffer += '\n';
+      else buffer += k;
+      updateScreen();
+    }
+
+    function createKeyboard() {
+      const parent = document.getElementById('keyboard');
+      const keyW = 0.14, keyH = 0.12, rowGap = 0.015;
+      layout.forEach((row, i) => {
+        let startX = -0.7;
+        let y = -i * (keyH + rowGap);
+        row.forEach(k => {
+          const el = document.createElement('a-entity');
+          const w = (k === 'Space') ? 0.8 : 0.14;
+          el.setAttribute('geometry', `primitive: plane; width: ${w}; height: ${keyH}`);
+          el.setAttribute('material', 'color: #333; shader: flat');
+          el.setAttribute('position', `${startX + w/2} ${y} 0`);
+          el.setAttribute('class', 'key');
+          el.appendChild(Object.assign(document.createElement('a-entity'), {
+            setAttribute: function(attr, val){this[attr]=val},
+            innerHTML:`<a-entity text="value: ${k}; align: center; color: #fff; width: 2" position="0 0 0.01"></a-entity>`
+          }));
+
+          const label = document.createElement('a-entity');
+          label.setAttribute('text', `value: ${k}; align: center; color: #fff; width: 2`);
+          label.setAttribute('position', '0 0 0.01');
+          el.appendChild(label);
+
+          el.addEventListener('click', () => {
+            handleKey(k);
+            el.setAttribute('scale', '0.9 0.9 0.9');
+            setTimeout(() => el.setAttribute('scale', '1 1 1'), 100);
+          });
+          parent.appendChild(el);
+          startX += w + 0.015;
+        });
+      });
+    }
+
+    setTimeout(() => {
+      createKeyboard();
+      updateScreen();
+    }, 500);
+
+    // Cursor blinking
+    setInterval(() => {
+      cursor.setAttribute('visible', !cursor.getAttribute('visible'));
+    }, 600);
+  </script>
+</body>
+</html>
+￼Enter file contents here
