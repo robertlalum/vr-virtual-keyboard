@@ -2,35 +2,61 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>WebXR VR Keyboard + Pointer</title>
+  <title>WebXR Virtual Keyboard + Pointer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+  
   <style>
     body { margin: 0; font-family: sans-serif; }
-    #uiHint { position: absolute; left: 12px; top: 12px; z-index: 10; color: white; background: rgba(0,0,0,0.4); padding:8px; border-radius:6px; }
+    #uiHint { 
+      position: absolute; left: 12px; top: 12px; z-index: 10; 
+      color: white; background: rgba(0,0,0,0.4); padding:8px; border-radius:6px; 
+    }
   </style>
 </head>
 <body>
-  <div id="uiHint">Open in Meta Quest Browser. Point + trigger to type. Use grip to toggle pointer drag.</div>
+  <div id="uiHint">
+    Open in Meta Quest Browser. Point + trigger to type. Use grip to toggle pointer drag.
+  </div>
 
   <a-scene background="color: #111" vr-mode-ui="enterVRButton: true">
+
     <!-- Camera + Controllers -->
     <a-entity id="cameraRig">
       <a-entity id="camera" camera look-controls position="0 1.6 0"></a-entity>
 
-      <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .key; far: 10; showLine: true"></a-entity>
-      <a-entity id="leftHand" laser-controls="hand: left" raycaster="objects: .key; far: 10; showLine: true"></a-entity>
+      <a-entity id="rightHand" laser-controls="hand: right"
+                raycaster="objects: .key; far: 10; showLine: true"
+                oculus-touch-controls
+                tracked-controls
+                vive-controls
+                daydream-controls></a-entity>
+
+      <a-entity id="leftHand" laser-controls="hand: left"
+                raycaster="objects: .key; far: 10; showLine: true"
+                oculus-touch-controls
+                tracked-controls></a-entity>
     </a-entity>
 
-    <!-- Text panel -->
+    <!-- Floating text panel -->
     <a-entity id="screen" position="0 1.6 -1.2">
-      <a-plane width="1.6" height="0.6" color="#222" material="shader:flat" position="0 0 0"></a-plane>
-      
-      <a-entity id="cursorBlink" geometry="primitive: plane; width:0.01; height:0.04" material="color: #fff" position="0.72 -0.18 0.01" visible="false"></a-entity>
+      <a-plane width="1.6" height="0.6" color="#222" material="shader:flat"></a-plane>
+      <a-entity id="typedText"
+                position="-0.78 0.25 0.01"
+                text="value: ; color: #fff; width: 1.5; align: left; wrapCount: 30; baseline: top">
+      </a-entity>
+      <a-entity id="cursorBlink"
+                geometry="primitive: plane; width:0.01; height:0.04"
+                material="color: #fff"
+                position="0.72 -0.18 0.01"
+                visible="false">
+      </a-entity>
     </a-entity>
 
-    <!-- Keyboard container -->
+    <!-- Keyboard parent -->
     <a-entity id="keyboard" position="0 1.25 -1.2"></a-entity>
 
     <!-- Pointer dot -->
@@ -44,21 +70,103 @@
   </a-scene>
 
 <script>
-  // VR Keyboard layout
-  const layout = [
-    ['1','2','3','4','5','6','7','8','9','0'],
-    ['q','w','e','r','t','y','u','i','o','p'],
-    ['a','s','d','f','g','h','j','k','l'],
-    ['z','x','c','v','b','n','m','Back'],
-    ['Space','Enter','!','@','#','$']
-  ];
+/* --- Keyboard Layout --- */
+const layout = [
+  ['1','2','3','4','5','6','7','8','9','0'],
+  ['Q','W','E','R','T','Y','U','I','O','P'],
+  ['A','S','D','F','G','H','J','K','L'],
+  ['Z','X','C','V','B','N','M','Back'],
+  ['Space','Enter','!','@','#','$']
+];
 
-  // Typed text buffer
-  let buffer = '';
-  const typedText = document.getElementById('typedText');
+// typed text buffer
+let buffer = '';
+const typedText = document.getElementById('typedText');
 
-  function updateScreen() {
-    typedText.setAttribute('text', `value: ${buffer}; color: #fff; width: 1.5; align: left; wrapCount: 30; baseline: top`);
+// update text on panel
+function updateScreen() {
+  typedText.setAttribute('text', `value: ${buffer}; color: #fff; width: 1.5; align: left; wrapCount: 30; baseline: top`);
+}
 
+// handle key press
+function handleKey(k) {
+  if(k==='Back') buffer = buffer.slice(0,-1);
+  else if(k==='Space') buffer += ' ';
+  else if(k==='Enter') buffer += '\n';
+  else buffer += k;
+  updateScreen();
+}
 
+/* --- Create VR Keyboard --- */
+AFRAME.registerComponent('key-pressable', {
+  init: function () {
+    this.el.addEventListener('click', () => {
+      const k = this.el.getAttribute('data-key');
+      handleKey(k);
+      // simple press animation
+      this.el.setAttribute('scale','0.95 0.95 0.95');
+      setTimeout(()=> this.el.setAttribute('scale','1 1 1'),80);
+    });
+  }
+});
 
+function createKeyboard() {
+  const parent = document.getElementById('keyboard');
+  const keyW = 0.14, keyH = 0.12, rowGap = 0.015;
+  let startY = 0.02;
+
+  layout.forEach((row,rowIndex)=>{
+    let rowWidth = row.length*(keyW+0.01);
+    let startX = -0.7 + (1.0-rowWidth)/2 + rowIndex*0.02;
+    row.forEach(k=>{
+      let w = (k==='Space') ? (keyW*5+0.04) : (k==='Enter' ? keyW*1.7 : keyW);
+      const el = document.createElement('a-entity');
+      el.setAttribute('geometry',`primitive: plane; width: ${w}; height: ${keyH}`);
+      el.setAttribute('material','color: #333; shader: flat');
+      el.setAttribute('position',`${startX + w/2} ${startY - rowIndex*(keyH+rowGap)} 0`);
+      el.setAttribute('class','key');
+      el.setAttribute('data-key',k);
+      el.setAttribute('key-pressable','');
+      const label = document.createElement('a-entity');
+      label.setAttribute('text',`value: ${k}; align: center; width: 2; color: #fff`);
+      label.setAttribute('position','0 0 0.01');
+      el.appendChild(label);
+      parent.appendChild(el);
+      startX += w + 0.01;
+    });
+  });
+}
+
+createKeyboard();
+
+/* --- Pointer / mouse emulation --- */
+const rightHand = document.getElementById('rightHand');
+const leftHand = document.getElementById('leftHand');
+const pointerDot = document.getElementById('pointerDot');
+
+let dragging = false;
+
+function setupGripToggle(handEl){
+  handEl.addEventListener('gripdown', ()=> dragging=true);
+  handEl.addEventListener('gripup', ()=> dragging=false);
+  handEl.addEventListener('triggerdown', ()=>{
+    const pos = pointerDot.getAttribute('position');
+    if(pointerDot.getAttribute('visible')) console.log('Pointer click at', pos);
+  });
+}
+
+setupGripToggle(rightHand);
+setupGripToggle(leftHand);
+
+// small blinking cursor
+setInterval(()=>{
+  const blink = document.getElementById('cursorBlink');
+  blink.setAttribute('visible', !blink.getAttribute('visible'));
+},500);
+
+// initial update
+updateScreen();
+</script>
+
+</body>
+</html>
