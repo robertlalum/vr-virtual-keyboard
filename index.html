@@ -1,80 +1,141 @@
-  <!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
   <head>
     <meta charset="utf-8" />
     <title>WebXR Virtual Keyboard + Pointer</title>
-    <meta name="description" content="VR Virtual Keyboard" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+
+    <!-- ✅ Critical: Load A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+    <!-- Optional helper components -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+
     <style>
       body {
         margin: 0;
+        overflow: hidden;
         font-family: sans-serif;
-        background-color: #000;
-        color: white;
-        text-align: center;
       }
 
-      #enterVR {
-        margin-top: 10px;
-        padding: 10px 20px;
-        font-size: 16px;
-        background-color: #0078ff;
-        border: none;
-        color: white;
-        border-radius: 10px;
-        cursor: pointer;
+      /* ✅ VR button always visible */
+      .a-enter-vr-button {
+        z-index: 9999 !important;
       }
 
-      .keyboard {
-        display: inline-block;
-        margin-top: 10px;
-        background: #111;
-        border: 2px solid #444;
-        border-radius: 10px;
-        padding: 10px;
+      /* Keyboard container */
+      #vrKeyboard {
+        position: absolute;
+        bottom: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        z-index: 1;
+      }
+
+      .keyRow {
+        display: flex;
+        gap: 5px;
       }
 
       .key {
-        display: inline-block;
-        width: 40px;
-        height: 40px;
-        margin: 3px;
-        border: none;
-        border-radius: 5px;
-        background: #333;
+        font-size: 1.2em;
+        padding: 10px 14px;
+        border: 1px solid #666;
+        border-radius: 6px;
+        background: #222;
         color: white;
-        font-size: 18px;
         cursor: pointer;
-        transition: background 0.2s;
       }
 
       .key:hover {
-        background: #555;
-      }
-
-      textarea {
-        width: 80%;
-        height: 100px;
-        margin-top: 20px;
-        border-radius: 10px;
-        border: 1px solid #555;
-        background: #222;
-        color: white;
-        padding: 10px;
-        font-size: 16px;
+        background: #333;
       }
     </style>
   </head>
 
   <body>
-    <h2>Press this to enter VR mode</h2>
-    <button id="enterVR">Enter VR</button>
+    <div
+      id="uiHint"
+      style="position: absolute; left: 12px; top: 12px; z-index: 10; color: white; background: rgba(0,0,0,0.4); padding:8px; border-radius:6px;"
+    >
+      Open in Meta Quest Browser. Point + trigger to type. Use grip to toggle pointer drag.
+    </div>
 
-    <textarea id="textBox" placeholder="Type here..."></textarea>
+    <!-- ✅ The A-Frame VR scene -->
+    <a-scene background="color: #111" vr-mode-ui="enterVRButton: true">
+      <!-- Camera Rig -->
+      <a-entity id="cameraRig">
+        <a-entity
+          id="camera"
+          camera
+          look-controls
+          position="0 1.6 0"
+        ></a-entity>
 
-    <!-- Keyboard layout -->
-    <div class="keyboard">
-      <div>
+        <a-entity
+          id="rightHand"
+          laser-controls="hand: right"
+          raycaster="objects: .key, .clickable; far: 10; showLine: true;"
+        ></a-entity>
+
+        <a-entity
+          id="leftHand"
+          laser-controls="hand: left"
+          raycaster="objects: .key, .clickable; far: 10; showLine: true;"
+        ></a-entity>
+      </a-entity>
+
+      <!-- Simple floating text panel -->
+      <a-entity id="screen" position="0 1.6 -1.2">
+        <a-plane
+          width="1.6"
+          height="0.6"
+          color="#222"
+          material="shader:flat"
+          position="0 0 0"
+        ></a-plane>
+        <a-entity
+          id="typedText"
+          position="-0.74 0.18 0.01"
+          text="value: ; color: #fff; width: 2.2; align: left; wrapCount: 45"
+        ></a-entity>
+      </a-entity>
+
+      <!-- Keyboard placeholder -->
+      <a-entity id="keyboard" position="0 1.25 -1.2"></a-entity>
+
+      <a-plane
+        rotation="-90 0 0"
+        width="10"
+        height="10"
+        color="#0b0b0b"
+        position="0 0 -2"
+      ></a-plane>
+
+      <a-entity light="type: ambient; intensity: 0.5"></a-entity>
+      <a-entity
+        light="type: directional; intensity: 0.7"
+        position="-1 2 1"
+      ></a-entity>
+    </a-scene>
+
+    <!-- ✅ 2D keyboard for fallback typing -->
+    <div id="vrKeyboard">
+      <textarea
+        id="textBox"
+        rows="3"
+        cols="40"
+        placeholder="Type here..."
+        style="font-size: 1.5em;"
+      ></textarea>
+
+      <div class="keyRow">
         <button class="key" data-key="1">1</button>
         <button class="key" data-key="2">2</button>
         <button class="key" data-key="3">3</button>
@@ -86,7 +147,8 @@
         <button class="key" data-key="9">9</button>
         <button class="key" data-key="0">0</button>
       </div>
-      <div>
+
+      <div class="keyRow">
         <button class="key" data-key="q">Q</button>
         <button class="key" data-key="w">W</button>
         <button class="key" data-key="e">E</button>
@@ -98,7 +160,8 @@
         <button class="key" data-key="o">O</button>
         <button class="key" data-key="p">P</button>
       </div>
-      <div>
+
+      <div class="keyRow">
         <button class="key" data-key="a">A</button>
         <button class="key" data-key="s">S</button>
         <button class="key" data-key="d">D</button>
@@ -109,7 +172,8 @@
         <button class="key" data-key="k">K</button>
         <button class="key" data-key="l">L</button>
       </div>
-      <div>
+
+      <div class="keyRow">
         <button class="key" data-key="z">Z</button>
         <button class="key" data-key="x">X</button>
         <button class="key" data-key="c">C</button>
@@ -117,26 +181,20 @@
         <button class="key" data-key="b">B</button>
         <button class="key" data-key="n">N</button>
         <button class="key" data-key="m">M</button>
+        <button class="key" data-key="backspace">⌫</button>
       </div>
-      <div>
-        <button class="key" data-key=" ">Space</button>
-        <button class="key" data-key="backspace">←</button>
-        <button class="key" data-key="enter">⏎</button>
+
+      <div class="keyRow">
+        <button class="key" data-key=" " style="width: 200px;">Space</button>
+        <button class="key" data-key="enter">Enter</button>
       </div>
     </div>
 
-    <!-- A-Frame VR Scene -->
-    <a-scene>
-      <a-entity position="0 1.6 0">
-        <a-camera></a-camera>
-      </a-entity>
-    </a-scene>
-
-    <!-- Script for Keyboard Logic -->
+    <!-- ✅ Keyboard logic -->
     <script>
       const keys = document.querySelectorAll('.key');
 
-      keys.forEach(key => {
+      keys.forEach((key) => {
         key.addEventListener('click', () => {
           const value = key.dataset.key;
           const textarea = document.querySelector('#textBox');
@@ -144,28 +202,33 @@
           const end = textarea.selectionEnd;
 
           if (value === 'backspace') {
-            textarea.value = textarea.value.slice(0, start - 1) + textarea.value.slice(end);
+            textarea.value =
+              textarea.value.slice(0, start - 1) + textarea.value.slice(end);
             textarea.selectionStart = textarea.selectionEnd = start - 1;
           } else if (value === 'enter') {
-            textarea.value = textarea.value.slice(0, start) + "\n" + textarea.value.slice(end);
+            textarea.value =
+              textarea.value.slice(0, start) +
+              '\n' +
+              textarea.value.slice(end);
             textarea.selectionStart = textarea.selectionEnd = start + 1;
           } else {
-            textarea.value = textarea.value.slice(0, start) + value + textarea.value.slice(end);
-            textarea.selectionStart = textarea.selectionEnd = start + value.length;
+            textarea.value =
+              textarea.value.slice(0, start) +
+              value +
+              textarea.value.slice(end);
+            textarea.selectionStart = textarea.selectionEnd =
+              start + value.length;
           }
 
           textarea.focus();
         });
       });
-
-      document.querySelector('#enterVR').addEventListener('click', () => {
-        const scene = document.querySelector('a-scene');
-        scene.enterVR();
-      });
     </script>
   </body>
 </html>
+        
 
   
+
 
 
