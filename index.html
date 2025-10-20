@@ -42,7 +42,7 @@
   <a-entity id="screen" position="0 1.6 -1.2">
     <a-plane width="1.6" height="0.6" color="#222" material="shader:flat" position="0 0 0"></a-plane>
     <!-- Text positioned at top-left, inside the text box -->
-    <a-entity id="typedText" position="-0.5 0.2 0.01" text="value: ; color: #fff; width: 1.0; align: left; wrapCount: 15; baseline: top; fontSize: 48"></a-entity>
+    <a-entity id="typedText" position="-0.4 0.2 0.01" text="value: ; color: #fff; width: 1.0; align: left; wrapCount: 15; baseline: top; fontSize: 48"></a-entity>
     <!-- Cursor positioned next to text -->
     <a-entity id="cursorBlink" geometry="primitive: plane; width:0.008; height:0.035" material="color: #fff; emissive: #fff" position="-0.7 0.2 0.01" visible="false"></a-entity>
   </a-entity>
@@ -143,7 +143,7 @@ function updateScreen() {
   typedText.setAttribute('text', 'value', buffer);
   // Position cursor right after the text (approximate character width)
   const charWidth = 0.03;
-  const cursorX = -0.5 + (buffer.length * charWidth);
+  const cursorX = -0.4 + (buffer.length * charWidth);
   cursorBlink.setAttribute('position', `${cursorX} 0.2 0.01`);
   
   // send to WS
